@@ -1,0 +1,10 @@
+flimma:
+  local_dataset:
+    data: data.csv
+  logic:
+    mode: file
+    dir: .
+  axis: 0
+  use_smpc: false
+  result:
+    mean: mean.txt
