@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build . --tag featureclud.ai/flimma
+docker build . --tag featurecloud.ai/flimma

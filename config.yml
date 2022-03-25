@@ -1,10 +1,17 @@
 flimma:
   local_dataset:
-    data: data.csv
+    counts: Split_1.counts.tsv
+    design: Split_1.design.tsv
   logic:
     mode: file
     dir: .
   axis: 0
   use_smpc: false
+  normalization: upper quartile
+  min_count: 10
+  min_total_count: 15
+  group1: diagnosis_age,
+  group2: stage,
+  confounders: diagnosis_age,stage,is_LumA
   result:
     mean: mean.txt

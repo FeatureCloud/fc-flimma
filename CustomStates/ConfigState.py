@@ -14,7 +14,7 @@
 import bios
 import os
 import shutil
-from FeatureCloud.engine.app import AppState, LogLevel
+from FeatureCloud.app.engine.app import AppState, LogLevel
 
 
 class State(AppState):
