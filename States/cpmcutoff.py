@@ -1,6 +1,6 @@
 """
     FeatureCloud Flimma Application
-    Copyright 2021 Mohammad Bakhtiari. All Rights Reserved.
+    Copyright 2022 Mohammad Bakhtiari. All Rights Reserved.
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -16,9 +16,6 @@ from FeatureCloud.app.engine.app import app_state, AppState, Role, SMPCOperation
 import numpy as np
 from States import large_n, min_prop, tol
 from CustomStates.AckState import AckState
-# from Acknowledge import acknowledge, get_acknowledge
-# from utils import js_serializer
-# from time import sleep
 
 
 @app_state('CPM_Cut_Off', Role.BOTH)
@@ -66,41 +63,10 @@ class CPMCutOff(AckState):
         self.send_data_to_coordinator(data=self.load('counts_df').sum(axis=1).values.astype('int').tolist(),
                                       use_smpc=self.load('smpc_used')
                                       )
-        # if self.coordinator:
-        #     self.store("des_counts_dfs",
-        #                self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
-        #                )
-        # else:
-        #     sleep(60)
-        # self.communicate_data(data=self.load('design_df').sum(axis=0).values.astype('int'), key='sum_num_samples')
-        # sleep(5)
-        # self.communicate_data(data=self.load('counts_df').sum(axis=1).values.astype('int'), key='sum_count_per_feature')
-
 
         if self.is_coordinator:
             return 'CPM_Cut_Off_Aggregation'
         return 'Apply_CPM_Cut_Off'
-
-    # def communicate_data(self, data, key):
-    #     # self.log(f"{key}: {data}")
-    #     # data_to_send = js_serializer.prepare(data) if self.load('smpc_used') else data
-    #     self.log(f"{key}: {type(data)}")
-    #
-    #     data_to_send = data.tolist() if hasattr(data, "tolist") else data
-    #     # if key == 'sum_num_samples' and len(self.clients) == 1 and not isinstance(data_to_send, (list, np.ndarray)):
-    #     #     data_to_send = [data_to_send]
-    #     #     self.log(f"{key}: {data_to_send}")
-    #     self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'), flush=0.1)
-    #     if self.is_coordinator:
-    #         summed_data = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
-    #         self.log(f"{key}: {summed_data}")
-    #         self.store(key, summed_data)
-    #
-    #         for c in self.clients:
-    #             acknowledge(self, c)
-    #     else:
-    #         get_acknowledge(self)
-        # flush(self)
 
 
 @app_state('CPM_Cut_Off_Aggregation', Role.COORDINATOR)
@@ -111,20 +77,11 @@ class CutOffAggregation(AppState):
     def run(self) -> str or None:
         self.log("HHHHHHHHHHHHHHHHHHHHHHHHHHHh")
         clients_lib_sizes = self.load('clients_lib_sizes')
-        # total_num_samples, total_count_per_feature = self.load('des_counts_dfs')
-        # total_num_samples, total_count_per_feature = \
-        #     self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
         total_num_samples = self.load('total_num_samples')
         total_count_per_feature = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
         self.log(f"{total_num_samples}, {total_count_per_feature}")
-        # total_num_samples, total_count_per_feature = \
-        #     self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
         total_num_samples = np.array(total_num_samples) / len(self.clients)
         total_count_per_feature = np.array(total_count_per_feature) / len(self.clients)
-        # total_num_samples = np.array(self.load('sum_num_samples')) / len(self.clients)
-        # total_count_per_feature = np.array(self.load('sum_count_per_feature')) / len(self.clients)
-
-        # clients_lib_sizes = self.gather_data()
         total_lib_sizes = np.concatenate(clients_lib_sizes)
 
         # define min allowed number of samples

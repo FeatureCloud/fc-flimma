@@ -1,6 +1,6 @@
 """
     FeatureCloud Flimma Application
-    Copyright 2021 Mohammad Bakhtiari. All Rights Reserved.
+    Copyright 2022 Mohammad Bakhtiari. All Rights Reserved.
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -16,9 +16,7 @@ from CustomStates.AckState import AckState
 from FeatureCloud.app.engine.app import State as op_state
 import numpy as np
 from CustomStates import ConfigState
-from utils import readfiles, js_serializer
-from Acknowledge import acknowledge, get_acknowledge
-from time import sleep
+from utils import readfiles
 
 name = 'flimma'
 
@@ -44,14 +42,11 @@ class LocalMean(ConfigState.State, AckState):
         self.read()
 
         # send the list of features and cohort names to the server
-        # data_to_send = js_serializer.prepare(self.load('local_sample_count')) if self.load('smpc_used') else self.load('local_sample_count')
         data_to_send = [self.load('local_sample_count')]
         self.log(f"**** Data: {data_to_send}")
         if self.load('smpc_used'):
             if hasattr(data_to_send, "tolist"):
                 data_to_send = data_to_send.tolist()
-            # elif np.isscalar(data_to_send):
-        # data_to_send = [data_to_send]
 
         self.log(f"**** Data: {data_to_send}")
         self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'), get_ack=True)
@@ -59,24 +54,11 @@ class LocalMean(ConfigState.State, AckState):
             self.store('global_sample_count',
                        self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load("smpc_used"), ack=True)
                        )
-        # if self.is_coordinator:
-        #     self.store('global_sample_count',
-        #                self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load("smpc_used"))
-        #                )
-        # else:
-        #     sleep(30)
-        #     self.store('summed_sample_counts',
-        #                self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load("smpc_used"))
-        #                )
-        #     for c in self.clients:
-        #         acknowledge(self, c)
-        # else:
-        #     get_acknowledge(self)
 
 
 
         data_to_send = [self.load('local_features'), self.load('cohort_name')]
-        print(f"### {[type(d) for d in data_to_send]}")
+        self.log(f"### {[type(d) for d in data_to_send]}")
         self.send_data_to_coordinator(data=data_to_send, use_smpc=False)
 
         if self.is_coordinator:

@@ -1,6 +1,6 @@
 """"
     FeatureCloud Flimma Application
-    Copyright 2021 Mohammad Bakhtiari. All Rights Reserved.
+    Copyright 2022 Mohammad Bakhtiari. All Rights Reserved.
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -18,7 +18,6 @@ from scipy import linalg
 from scipy.interpolate import interp1d
 from utils import js_serializer
 from States import get_k_n
-from Acknowledge import acknowledge, get_acknowledge
 from CustomStates.AckState import AckState
 
 
@@ -43,17 +42,6 @@ class LinearRegression(AckState):
         self.compute_log_cpm()
         self.compute_linear_regression_parameters()
         self.weighted = not self.weighted
-        # data_to_send = js_serializer.prepare(self.load('xt_x')) if self.load('smpc_used') else self.load('xt_x')
-        # self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'), flush=20)
-        #
-        # if self.is_coordinator:
-        #     self.store('sum_xt_x', self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used')))
-        #     for c in self.clients:
-        #         acknowledge(self, c)
-        # else:
-        #     get_acknowledge(self)
-        # data_to_send = js_serializer.prepare(self.load('xt_y')) if self.load('smpc_used') else self.load('xt_y')
-        # self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'))
         self.communicate_data()
         if self.is_coordinator:
             return 'Aggregate_Reg_Params'
@@ -126,13 +114,13 @@ class AggregateRegression(AppState):
 
     def run(self) -> str or None:
         global_xt_x = np.array(self.load('sum_xt_x')) / len(self.clients)
-        # print(f"XTX: {global_xt_x.shape}")
+        self.log(f"XTX: {global_xt_x.shape}")
         sum_xt_y = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
         global_xt_y = np.array(sum_xt_y) / len(self.clients)
-        # print(f"XTY: {global_xt_y.shape}")
+        self.log(f"XTY: {global_xt_y.shape}")
         k, n = get_k_n(self.load('server_vars'), self.load('confounders'), self.load('cohort_names'),
                        self.load('gene_name_list'))
-        print(f"N={n}\nK={k}, ")
+        self.log(f"N={n}\nK={k}, ")
         beta = np.zeros((n, k))
         rank = np.ones(n) * k
         std_unscaled = np.zeros((n, k))

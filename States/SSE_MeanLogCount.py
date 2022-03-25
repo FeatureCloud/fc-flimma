@@ -1,6 +1,6 @@
 """"
     FeatureCloud Flimma Application
-    Copyright 2021 Mohammad Bakhtiari. All Rights Reserved.
+    Copyright 2022 Mohammad Bakhtiari. All Rights Reserved.
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -23,8 +23,8 @@ from statsmodels.stats.multitest import multipletests
 from copy import copy
 from bioinfokit import visuz
 from States import get_k_n
-from Acknowledge import acknowledge, get_acknowledge
 from CustomStates.AckState import AckState
+
 
 @app_state('SSE', Role.BOTH)
 class SSE(AckState):
@@ -56,16 +56,6 @@ class SSE(AckState):
             self.weighted = not self.weighted
             return 'Linear_Regression'
         return 'terminal'
-
-    # def communicate_data(self, data, names):
-    #     for d, n in zip(data, names):
-    #         self.send_data_to_coordinator(data=d, use_smpc=self.load('smpc_used'))
-    #         if self.is_coordinator:
-    #             self.store(n, self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used')))
-    #             for c in self.clients:
-    #                 acknowledge(self, c)
-    #         else:
-    #             get_acknowledge(self)
 
     def communicate_data(self, data, names):
         for d, n in zip(data, names):
@@ -107,10 +97,6 @@ class SSE(AckState):
 
         log_count_conversion_term = np.sum(np.log2(self.load('lib_sizes') + 1))
         return log_count, log_count_conversion_term
-        # self.local_parameters[FlimmaLocalParameter.LOG_COUNT] = log_count
-        # self.local_parameters[FlimmaLocalParameter.LOG_COUNT_CONVERSION] = log_count_conversion_term.item()
-
-        # self.set_compensator_flag()
 
 
 @app_state('Aggregate_SSE', Role.COORDINATOR)
@@ -125,17 +111,12 @@ class AggregateSSE(AppState):
 
     def run(self) -> str or None:
 
-        # sum_sample_count, sum_cov, sum_sse, sum_log_count, sum_log_count_conversion = \
-        #     self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
-        # self.aggregate_sse(sum_sample_count, sum_cov, sum_sse)
-        # self.aggregate_mean_log_count(sum_log_count, sum_log_count_conversion)
         self.aggregate_sse()
         self.aggregate_mean_log_count()
 
         if self.weighted:
             self.ebayes_step()
             self.table.to_csv(self.load('output_files')['table'][0], sep="\t")
-            # self.prepare_results()
             return 'terminal'
         self.weighted = not self.weighted
         return 'Linear_Regression'
@@ -178,34 +159,29 @@ class AggregateSSE(AppState):
         return k, n
 
     def ebayes_step(self):
-        print("making contrasts ...")
+        self.log("making contrasts ...")
         # self.make_contrasts(contrast_list=[([self.contrast1_list[0]], [self.contrast2_list[0]])])
         self.make_contrasts(contrast_list=[([self.load('group1')[0]], [self.load('group2')[0]])])
-        print("contrast matrix:")
-        print(self.contrast_matrix)
-        print("Fitting contrasts ...")
+        self.log("contrast matrix:")
+        self.log(self.contrast_matrix)
+        self.log("Fitting contrasts ...")
         self.fit_contrasts()
 
-        print("empirical Bayes ...")
+        self.log("empirical Bayes ...")
         self.e_bayes()
-        print("Done!")
+        self.log("Done!")
 
-        print("Table:")
-        print(self.table)
-        print('plotting ...')
+        self.log("Table:")
+        self.log(self.table)
+        self.log('plotting ...')
         self.volcano_plot()
-        print('done!')
-
-    # def prepare_results(self):
-    #     """ Prepare result files for Flimma project """
-    #     # save the result file
-    #     self.table.to_csv(self.load('output_files')['table'][0], sep="\t")
+        self.log('done!')
 
     def volcano_plot(self):
         table = self.table
         table["gene_names"] = table.index.values
         gnames_to_plot = tuple(table.head(20).index.values)
-        print(self.load('output_files')['volcano'][0])
+        self.log(self.load('output_files')['volcano'][0])
         visuz.gene_exp.volcano(df=table, lfc='logFC',
                                pv='adj.P.Val', lfc_thr=(1.0, 1.0),
                                pv_thr=(0.05, 0.05), sign_line=True,
@@ -226,7 +202,7 @@ class AggregateSSE(AppState):
             group1, group2 = contrast
             for name in group1 + group2:
                 if name not in conditions:
-                    print(name, "not found in the design matrix.")
+                    self.log(name, "not found in the design matrix.")
                     exit(1)
             contrast_name = "".join(map(str, group1)) + "_vs_" + "".join(map(str, group2))
             series = pd.Series(data=np.zeros(len(conditions)), index=conditions)
@@ -241,13 +217,13 @@ class AggregateSSE(AppState):
         #	Correlation matrix of estimable coefficients
         #	Test whether design was orthogonal
         if not np.any(self.cov_coefficient):
-            print("no coefficient correlation matrix found in fit - assuming orthogonal")
+            self.log("no coefficient correlation matrix found in fit - assuming orthogonal")
             correlation_matrix = np.identity(n_coef)
             orthog = True
         else:
-            print("coefficient correlation matrix is found")
+            self.log("coefficient correlation matrix is found")
             correlation_matrix = self.cov2cor()
-            print("cov2cor() is called")
+            self.log("cov2cor() is called")
             if correlation_matrix.shape[0] * correlation_matrix.shape[1] < 2:
                 orthog = True
             else:
@@ -260,7 +236,7 @@ class AggregateSSE(AppState):
         #	to allow zero contrast entries to clobber NA coefficients.
         self.std_unscaled = self.load('std_unscaled')
         if np.any(np.isnan(self.load('beta'))):
-            print("Replace NA coefficients with large (but finite) standard deviations")
+            self.log("Replace NA coefficients with large (but finite) standard deviations")
             np.nan_to_num(self.load('beta'), nan=0)
             np.nan_to_num(self.std_unscaled, nan=1e30)
 
@@ -311,7 +287,7 @@ class AggregateSSE(AppState):
             if np.max(-dif / y) < 1e-8:  # tolerance
                 return y
 
-        print("Warning: Iteration limit exceeded")
+        self.log("Warning: Iteration limit exceeded")
         return y
 
     def moderatedT(self, covariate=False, robust=False, winsor_tail_p=(0.05, 0.1)):
@@ -338,13 +314,13 @@ class AggregateSSE(AppState):
         '''Estimates df and var priors and computes posterior variances.'''
         if robust:
             # TBD fitFDistRobustly()
-            print("Set robust=False.")
+            self.log("Set robust=False.")
             return
         else:
             var_prior, df_prior = self.fitFDist(covariate=covariate)
 
         if np.isnan(df_prior):
-            print("Error: Could not estimate prior df")
+            self.log("Error: Could not estimate prior df")
             return
 
         var_post = self.posterior_var(var_prior=var_prior, df_prior=df_prior)
@@ -357,18 +333,18 @@ class AggregateSSE(AppState):
 
         if covariate:
             # TBD
-            print("Set covariate=False.")
+            self.log("Set covariate=False.")
             return
 
         # Avoid zero variances
         variances = [max(var, 0) for var in self.variance]
         median = np.median(variances)
         if median == 0:
-            print("Warning: More than half of residual variances are exactly zero: eBayes unreliable")
+            self.log("Warning: More than half of residual variances are exactly zero: eBayes unreliable")
             median = 1
         else:
             if 0 in variances:
-                print("Warning: Zero sample variances detected, have been offset (+1e-5) away from zero")
+                self.log("Warning: Zero sample variances detected, have been offset (+1e-5) away from zero")
 
         variances = [max(var, 1e-5 * median) for var in variances]
         z = np.log(variances)
@@ -472,14 +448,14 @@ class AggregateSSE(AppState):
         nan_ndx = np.argwhere(np.isnan(self.results["var_prior"]))
         if len(nan_ndx) > 0:
             if self.results["var.prior"][nan_ndx] < - 1.0 / self.results["s2_prior"]:
-                print("Warning: Estimation of var.prior failed - set to default value")
+                self.log("Warning: Estimation of var.prior failed - set to default value")
         r = np.outer(np.ones(self.results["t"].shape[0]), self.results["var_prior"])
         r = (self.std_unscaled ** 2 + r) / self.std_unscaled ** 2
         t2 = self.results["t"] ** 2
 
         valid_df_ndx = np.where(self.results["df_prior"] <= 1e6)[0]
         if len(valid_df_ndx) < len(self.results["df_prior"]):
-            print("Large (>1e6) priors for DF:", len(valid_df_ndx))
+            self.log("Large (>1e6) priors for DF:", len(valid_df_ndx))
             kernel = t2 * (1 - 1.0 / r) / 2
             for i in valid_df_ndx:
                 kernel[i] = (1 + self.df_total[i]) / 2 * np.log(
