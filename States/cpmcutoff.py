@@ -16,6 +16,7 @@ from FeatureCloud.app.engine.app import app_state, AppState, Role, SMPCOperation
 import numpy as np
 from States import large_n, min_prop, tol
 from CustomStates.AckState import AckState
+from time import sleep
 
 
 @app_state('CPM_Cut_Off', Role.BOTH)
@@ -50,9 +51,6 @@ class CPMCutOff(AckState):
         self.store('variables', self.load('group1') + self.load('group2') + self.load('confounders') + cohort_effects)
         self.store('design_df', design_df.loc[:, self.load('variables')])
         self.log("###### Send out data")
-        self.send_data_to_coordinator(data=self.load('counts_df').sum(axis=0).values, use_smpc=False, get_ack=True)
-        if self.is_coordinator:
-            self.store('clients_lib_sizes', self.gather_data(ack=True))
         self.send_data_to_coordinator(data=self.load('design_df').sum(axis=0).values.astype('int').tolist(),
                                       use_smpc=self.load('smpc_used'),
                                       get_ack=True)
@@ -60,6 +58,12 @@ class CPMCutOff(AckState):
             self.store('total_num_samples',
                        self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'), ack=True)
                        )
+
+        # self.log('total_num_samples communicated')
+        self.send_data_to_coordinator(data=self.load('counts_df').sum(axis=0).values, use_smpc=False, get_ack=True)
+        if self.is_coordinator:
+            self.store('clients_lib_sizes', self.gather_data(ack=True))
+        # self.log('clients_lib_sizes communicated')
         self.send_data_to_coordinator(data=self.load('counts_df').sum(axis=1).values.astype('int').tolist(),
                                       use_smpc=self.load('smpc_used')
                                       )
@@ -75,11 +79,10 @@ class CutOffAggregation(AppState):
         self.register_transition('Apply_CPM_Cut_Off', Role.COORDINATOR)
 
     def run(self) -> str or None:
-        self.log("HHHHHHHHHHHHHHHHHHHHHHHHHHHh")
         clients_lib_sizes = self.load('clients_lib_sizes')
         total_num_samples = self.load('total_num_samples')
         total_count_per_feature = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
-        self.log(f"{total_num_samples}, {total_count_per_feature}")
+        self.log(f"total_num_samples: {total_num_samples}, total_count_per_feature: {total_count_per_feature}")
         total_num_samples = np.array(total_num_samples) / len(self.clients)
         total_count_per_feature = np.array(total_count_per_feature) / len(self.clients)
         total_lib_sizes = np.concatenate(clients_lib_sizes)
