@@ -1,33 +1,55 @@
 ## FeatureCloud Flimma app
+### Federated version of state of the art Limma Voom application
+<p><b>Flimma</b> is a federated privacy-aware version of state-of-the art differential expression analysis method <a href="https://bioconductor.org/packages/release/bioc/html/limma.html"><i><b>limma voom</b></i></a>.</p> 
+   <p>Publiation: <a href="https://genomebiology.biomedcentral.com/articles/10.1186/s13059-021-02553-2"<i><b> BMC Genome Biology (2021)</b></i></a>.</p> 
+   
+   <p><b>FeatureCloud Flimma app</b> is implemented based on <a href="https://exbio.wzw.tum.de/flimma/"<i>exbio.wzw.tum.de/flimma/</i></a></p> 
 
-Description
 
-![Workflow](../data/images/Mean.png)
- As input, it gets a CSV file, e.g., `data.csv`, from each client, calculates the local mean, and communicates it with the controller.
-Depending on the received data, the controller, based on usage of the SMPC module, calculates the global mean and sends it back to clients.
-Finally, clients write the global mean into an output file.
 
 ### Config
 
 ```angular2html
-fc_mean:
+flimma:
   local_dataset:
-    data: data.csv
+    counts: counts.tsv
+    design: design.tsv
   logic:
     mode: file
     dir: .
   axis: 0
   use_smpc: false
+  normalization: upper quartile
+  min_count: 10
+  min_total_count: 15
+  group1: Lum
+  group2: Basal
+  confounders: diagnosis_age,stage
   result:
-    mean: mean.txt
+    table: results.csv
+    volcano: volcano
 ```
-The mean app can be used with secure SMPC aggregation to aggregate local datasets in three possible ways based on `axis`.
-`axis` can get one of these values:
-- `None`: each client will send the mean value of its dataset(a scalar).
-- `0`: the client will send a mean value for each column or feature.
-- `1`: same as `0`, but the number of samples will also be sent to have a weighted average.
 
-
+### Run Flimma
+#### Prerequisite
+To run the flimma application you should install Docker and featurecloud pip package:
+```shell 
+pip install featurecloud
+```
+Then either download the flimma image from featurecloud docker repository:
+```shell
+featurecloud app download featurecloud.ai/fc_flimma 
+```
+Or build the app locally:
+```shell
+featurecloud app build featurecloud.ai/fc_flimma 
+```
+You can use provided example data or you own data. And provide the desired settings in the `config.yml` file.
+#### Running app
+You can run Flimma as a standalone app in the [FeatureCloud test-bed](https://featurecloud.ai/development/test) or [FeatureCloud Workflow](https://featurecloud.ai/projects). You can also run the app using CLI:
+```shell
+featurecloud test start --app-image featurecloud.ai/flimma --client-dirs './flimma/c1,./flimma/c2,./flimma/c3' --generic-dir './flimma/generic'
+```
 ```angular2html
 @article{Zolotareva2021,
  doi = {10.1186/s13059-021-02553-2},
