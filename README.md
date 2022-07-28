@@ -1,4 +1,4 @@
-## FeatureCloud Flimma app
+## [FeatureCloud Flimma app](https://featurecloud.ai/app/flimma)
 ### Federated version of state of the art Limma Voom application
 <p><b>Flimma</b> is a federated privacy-aware version of state-of-the art differential expression analysis method <a href="https://bioconductor.org/packages/release/bioc/html/limma.html"><i><b>limma voom</b></i></a>.</p> 
    <p>Publiation: <a href="https://genomebiology.biomedcentral.com/articles/10.1186/s13059-021-02553-2"<i><b> BMC Genome Biology (2021)</b></i></a>.</p> 
@@ -32,13 +32,13 @@ flimma:
 
 ### Run Flimma
 #### Prerequisite
-To run the flimma application you should install Docker and featurecloud pip package:
+To run the Flimma application you should install Docker and featurecloud pip package:
 ```shell 
 pip install featurecloud
 ```
-Then either download the flimma image from featurecloud docker repository:
+Then either download the Flimma image from featurecloud docker repository:
 ```shell
-featurecloud app download featurecloud.ai/fc_flimma 
+featurecloud app download featurecloud.ai/flimma 
 ```
 Or build the app locally:
 ```shell
