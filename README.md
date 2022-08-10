@@ -5,7 +5,7 @@
    
    <p><b>FeatureCloud Flimma app</b> is implemented based on <a href="https://exbio.wzw.tum.de/flimma/"<i>exbio.wzw.tum.de/flimma/</i></a></p> 
 
-
+![state diagram](data/images/state_diagram.png)
 
 ### Config
 
