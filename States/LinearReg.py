@@ -33,7 +33,8 @@ class LinearRegression(AckState):
     def run(self) -> str or None:
         if self.weighted:
             print("Weighted Regression")
-            self.weight_step()
+            py_lowess = self.await_data()
+            self.weight_step(py_lowess)
         else:
             print("Regression")
             f = self.await_data()
@@ -93,9 +94,7 @@ class LinearRegression(AckState):
         self.store('xt_y', xt_y)
         self.store('mu', mu)
 
-    def weight_step(self):
-        py_lowess = self.await_data()
-
+    def weight_step(self, py_lowess):
         '''Converts fitted logCPM back to fitted log-counts.'''
         fitted_counts = (2 ** self.load(
             'mu').T) * 10 ** -6  # fitted logCPM -> fitted CPM -> fitted counts/norm_lib_size
