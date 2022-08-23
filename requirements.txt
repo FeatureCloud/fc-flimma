@@ -8,5 +8,4 @@ pyyaml
 pandas
 scipy==1.5.4
 statsmodels==0.12.2
-bioinfokit==2.0.4
 featurecloud
