@@ -21,7 +21,6 @@ from scipy.special import digamma, polygamma
 from scipy.stats import t
 from statsmodels.stats.multitest import multipletests
 from copy import copy
-from bioinfokit import visuz
 from States import get_k_n
 from CustomStates.AckState import AckState
 
@@ -35,7 +34,7 @@ class SSE(AckState):
     def register(self):
         self.register_transition('Aggregate_SSE', Role.COORDINATOR)
         self.register_transition('Linear_Regression', Role.PARTICIPANT)
-        self.register_transition('terminal', Role.PARTICIPANT)
+        self.register_transition('Write_Results', Role.PARTICIPANT)
 
     def run(self) -> str or None:
         self.beta = self.await_data()
@@ -55,7 +54,7 @@ class SSE(AckState):
         if not self.weighted:
             self.weighted = not self.weighted
             return 'Linear_Regression'
-        return 'terminal'
+        return 'Write_Results'
 
     def communicate_data(self, data, names):
         for d, n in zip(data, names):
@@ -114,12 +113,26 @@ class AggregateSSE(AppState):
         self.aggregate_sse()
         self.aggregate_mean_log_count()
 
-        if self.weighted:
-            self.ebayes_step()
-            self.table.to_csv(self.load('output_files')['table'][0], sep="\t")
-            return 'terminal'
-        self.weighted = not self.weighted
-        return 'Linear_Regression'
+        if not self.weighted:
+            self.broadcast_data(self.py_lowess)
+            self.weighted = not self.weighted
+            return 'Linear_Regression'
+        self.ebayes_step()
+        self.log('Creating the tabel')
+        df = pd.DataFrame(data={'EFFECTSIZE': self.table['logFC'],
+                                'P': self.table['adj.P.Val'],
+                                'GENE': self.table.index.values
+                                },
+                          columns=['EFFECTSIZE', 'P', 'GENE'],
+                          index=None)
+        df['SNP'] = None
+        df.to_csv(self.load('output_files')['table'][0], sep=",", index=False)
+        data_to_send = np.array([df["EFFECTSIZE"].values.tolist(), df['P'].values.tolist(), df['GENE'].values.tolist()])
+        self.log('Broadcasting the data')
+        self.log(data_to_send.shape)
+        self.broadcast_data(data=data_to_send)
+        return 'terminal'
+
 
     def aggregate_sse(self):
         self.global_sample_count = np.array(self.load('sum_sample_count')) / len(self.clients)
@@ -151,7 +164,6 @@ class AggregateSSE(AppState):
                                      frac=0.5,
                                      delta=self.delta,
                                      return_sorted=True, is_sorted=False)
-        self.broadcast_data(self.py_lowess)
 
     def get_k_n(self):
         k = len(self.load('variables')) + len(self.load('confounders')) + len(self.load('cohort_names')) - 1
@@ -160,7 +172,6 @@ class AggregateSSE(AppState):
 
     def ebayes_step(self):
         self.log("making contrasts ...")
-        # self.make_contrasts(contrast_list=[([self.contrast1_list[0]], [self.contrast2_list[0]])])
         self.make_contrasts(contrast_list=[([self.load('group1')[0]], [self.load('group2')[0]])])
         self.log("contrast matrix:")
         self.log(self.contrast_matrix)
@@ -169,26 +180,6 @@ class AggregateSSE(AppState):
 
         self.log("empirical Bayes ...")
         self.e_bayes()
-        self.log("Done!")
-
-        self.log("Table:")
-        self.log(self.table)
-        self.log('plotting ...')
-        self.volcano_plot()
-        self.log('done!')
-
-    def volcano_plot(self):
-        table = self.table
-        table["gene_names"] = table.index.values
-        gnames_to_plot = tuple(table.head(20).index.values)
-        self.log(self.load('output_files')['volcano'][0])
-        visuz.gene_exp.volcano(df=table, lfc='logFC',
-                               pv='adj.P.Val', lfc_thr=(1.0, 1.0),
-                               pv_thr=(0.05, 0.05), sign_line=True,
-                               genenames=gnames_to_plot, geneid="gene_names", gstyle=2, gfont=8,
-                               show=False, plotlegend=True, legendpos='upper center',
-                               figname=self.load('output_files')['volcano'][0], figtype="png",
-                               color=("#E10600FF", "grey", "#00239CFF"), dim=(10, 5))
 
     def make_contrasts(self, contrast_list):
         """Creates contrast matrix given design matrix and pairs or columns to compare.
@@ -503,3 +494,22 @@ class AggregateSSE(AppState):
 
         self.top_table_t(adjust="fdr_bh", p_value=1.0, lfc=0, confint=0.95)
         self.table = self.table.sort_values(by="P.Value")
+
+
+@app_state('Write_Results', Role.PARTICIPANT)
+class WriteResults(AppState):
+    def __init__(self):
+        self.weighted = False
+        self.results = {}
+
+    def register(self):
+        self.register_transition('terminal', Role.PARTICIPANT)
+
+    def run(self) -> str or None:
+        self.update(message="Writing results...")
+        effect_size, p_values, genes = self.await_data()
+        df = pd.DataFrame(data={'EFFECTSIZE': effect_size, 'P': p_values, 'GENE': genes},
+                          columns=['EFFECTSIZE', 'P', 'GENE'], index=None)
+        df['SNP'] = None
+        df.to_csv(self.load('output_files')['table'][0], sep=",", index=False)
+        return 'terminal'
