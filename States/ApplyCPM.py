@@ -17,11 +17,7 @@ import numpy as np
 from States import tol
 from utils import js_serializer
 
-@app_state('Apply_CPM_Cut_Off', Role.BOTH)
 class ApplyCPM(AppState):
-    def register(self):
-        self.register_transition('Aggregate_Gene_Names', Role.COORDINATOR)
-        self.register_transition('Compute_Norm_Factors', Role.PARTICIPANT)
 
     def run(self) -> str or None:
         cpm_cutoff = self.await_data()
@@ -30,15 +26,11 @@ class ApplyCPM(AppState):
         cpm_cutoff_sample_count = cpm[cpm >= cpm_cutoff].apply(lambda x: sum(x.notnull().values), axis=1).values
         data_to_send = js_serializer.prepare(cpm_cutoff_sample_count) if self.load('smpc_used') else cpm_cutoff_sample_count
         self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'))
-        if self.is_coordinator:
-            return 'Aggregate_Gene_Names'
-        return 'Compute_Norm_Factors'
 
 
-@app_state('Aggregate_Gene_Names', Role.COORDINATOR)
+
 class AggregateGeneNames(AppState):
-    def register(self):
-        self.register_transition('Compute_Norm_Factors', Role.COORDINATOR)
+
 
     def run(self) -> str or None:
         summ_cpm_cutoff_sample_count = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
@@ -50,4 +42,4 @@ class AggregateGeneNames(AppState):
         self.store('gene_name_list', np.array(self.load('gene_name_list'))[intersect].tolist())
         self.log(f"features passed both cutoffs: {len(self.load('gene_name_list'))}")
         self.broadcast_data(self.load('gene_name_list'))
-        return 'Compute_Norm_Factors'
+

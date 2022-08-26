@@ -16,11 +16,9 @@ from FeatureCloud.app.engine.app import app_state, AppState, Role, SMPCOperation
 import numpy as np
 
 
-@app_state('Compute_Norm_Factors', Role.BOTH)
+
 class ComputeNormFactors(AppState):
-    def register(self):
-        self.register_transition('Aggregate_Lib_Sizes', Role.COORDINATOR)
-        self.register_transition('Linear_Regression', Role.PARTICIPANT)
+
 
     def run(self) -> str or None:
         filtered_genes = self.await_data()
@@ -29,15 +27,9 @@ class ComputeNormFactors(AppState):
         self.store('upper_quartile', self.load('counts_df').quantile(0.75).values)
         data_to_send = [self.load('upper_quartile'), self.load('lib_sizes')]
         self.send_data_to_coordinator(data=data_to_send, use_smpc=False)
-        if self.is_coordinator:
-            return 'Aggregate_Lib_Sizes'
-        return 'Linear_Regression'
 
 
-@app_state('Aggregate_Lib_Sizes', Role.COORDINATOR)
 class AggregateLibSizes(AppState):
-    def register(self):
-        self.register_transition('Linear_Regression', Role.COORDINATOR)
 
     def run(self) -> str or None:
         clients_upper_quartiles, clients_lib_sizes = [], []
@@ -50,4 +42,4 @@ class AggregateLibSizes(AppState):
         quart_to_lib_size = upper_quartiles / lib_sizes
         self.broadcast_data(np.exp(np.mean(np.log(quart_to_lib_size))))
 
-        return 'Linear_Regression'
+

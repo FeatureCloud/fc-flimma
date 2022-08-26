@@ -19,11 +19,7 @@ from CustomStates.AckState import AckState
 from time import sleep
 
 
-@app_state('CPM_Cut_Off', Role.BOTH)
 class CPMCutOff(AckState):
-    def register(self):
-        self.register_transition('CPM_Cut_Off_Aggregation', Role.COORDINATOR)
-        self.register_transition('Apply_CPM_Cut_Off', Role.PARTICIPANT)
 
     def run(self) -> str or None:
         self.log("Enetr CPM ")
@@ -68,12 +64,7 @@ class CPMCutOff(AckState):
                                       use_smpc=self.load('smpc_used')
                                       )
 
-        if self.is_coordinator:
-            return 'CPM_Cut_Off_Aggregation'
-        return 'Apply_CPM_Cut_Off'
 
-
-@app_state('CPM_Cut_Off_Aggregation', Role.COORDINATOR)
 class CutOffAggregation(AppState):
     def register(self):
         self.register_transition('Apply_CPM_Cut_Off', Role.COORDINATOR)
@@ -108,4 +99,3 @@ class CutOffAggregation(AppState):
         self.broadcast_data(CPM_cutoff)
         self.store('min_per_group_num_samples', min_per_group_num_samples)
         self.store('genes_passed_total_count', genes_passed_total_count)
-        return 'Apply_CPM_Cut_Off'

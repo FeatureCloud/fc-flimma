@@ -18,20 +18,13 @@ import numpy as np
 from CustomStates import ConfigState
 from utils import readfiles
 
-name = 'flimma'
 
-
-@app_state(name='initial', role=Role.BOTH, app_name=name)
 class LocalMean(ConfigState.State, AckState):
 
     def __init__(self, app_name, input_dir: str = "/mnt/input", output_dir: str = "/mnt/output"):
         ConfigState.State.__init__(self, app_name, input_dir, output_dir)
         self.design_df = None
         self.counts_df = None
-
-    def register(self):
-        self.register_transition('Global_Mean', Role.COORDINATOR)
-        self.register_transition('CPM_Cut_Off', Role.PARTICIPANT)
 
     def run(self) -> str or None:
         self.lazy_init()
@@ -55,15 +48,9 @@ class LocalMean(ConfigState.State, AckState):
                        self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load("smpc_used"), ack=True)
                        )
 
-
-
         data_to_send = [self.load('local_features'), self.load('cohort_name')]
         self.log(f"### {[type(d) for d in data_to_send]}")
         self.send_data_to_coordinator(data=data_to_send, use_smpc=False)
-
-        if self.is_coordinator:
-            return 'Global_Mean'
-        return 'CPM_Cut_Off'
 
     def read(self):
         counts_df, design_df = readfiles(self.load('input_files')['counts'][0],
@@ -104,7 +91,7 @@ class LocalMean(ConfigState.State, AckState):
         self.store('norm_factors', np.ones(counts_df.shape[1]))
 
 
-@app_state('Global_Mean', Role.COORDINATOR)
+
 class GlobalMean(AppState):
     def __init__(self):
         super().__init__()
@@ -128,7 +115,6 @@ class GlobalMean(AppState):
         # self.broadcast_data(data=[self.gene_name_list, self.cohort_effects, self.global_sample_count])
         self.broadcast_data(data=[self.gene_name_list, self.cohort_effects])
         self.store("server_vars", self.load('group1') + self.load('group2'))
-        return 'CPM_Cut_Off'
 
     def aggregate_cohort_names_and_features(self):
         feature_lists, cohort_names = [], []

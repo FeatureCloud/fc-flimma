@@ -21,14 +21,12 @@ from States import get_k_n
 from CustomStates.AckState import AckState
 
 
-@app_state('Linear_Regression', Role.BOTH)
+
 class LinearRegression(AckState):
     def __init__(self):
         self.weighted = False
 
-    def register(self):
-        self.register_transition('Aggregate_Reg_Params', Role.COORDINATOR)
-        self.register_transition('SSE', Role.PARTICIPANT)
+
 
     def run(self) -> str or None:
         if self.weighted:
@@ -44,9 +42,7 @@ class LinearRegression(AckState):
         self.compute_linear_regression_parameters()
         self.weighted = not self.weighted
         self.communicate_data()
-        if self.is_coordinator:
-            return 'Aggregate_Reg_Params'
-        return 'SSE'
+
 
     def communicate_data(self):
         data_to_send = js_serializer.prepare(self.load('xt_x')) if self.load('smpc_used') else self.load('xt_x')
@@ -106,10 +102,8 @@ class LinearRegression(AckState):
         self.store('weight', lo(fitted_log_counts) ** -4)
 
 
-@app_state('Aggregate_Reg_Params', Role.COORDINATOR)
+
 class AggregateRegression(AppState):
-    def register(self):
-        self.register_transition('SSE', Role.COORDINATOR)
 
     def run(self) -> str or None:
         global_xt_x = np.array(self.load('sum_xt_x')) / len(self.clients)
@@ -131,4 +125,4 @@ class AggregateRegression(AppState):
         self.broadcast_data(beta)
         self.store('beta', beta)
         self.store('std_unscaled', std_unscaled)
-        return 'SSE'
+

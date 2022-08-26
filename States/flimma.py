@@ -1,0 +1,173 @@
+from FeatureCloud.app.engine.app import Role, AppState, app_state
+from .InitStates import LocalMean, GlobalMean
+from .cpmcutoff import CPMCutOff, CutOffAggregation
+from .ApplyCPM import ApplyCPM, AggregateGeneNames
+from .ComputeNormFactors import ComputeNormFactors, AggregateLibSizes
+from .LinearReg import LinearRegression, AggregateRegression
+from .SSE_MeanLogCount import SSE, AggregateSSE, WriteResults
+
+
+@app_state(name='initial', role=Role.BOTH, app_name='flimma')
+class B1(LocalMean):
+    def register(self):
+        self.register_transition('Global Mean', Role.COORDINATOR, 'Gather local_features and cohort names')
+        self.register_transition('CPM Cutoff', Role.PARTICIPANT, 'Wait for shared genes')
+
+    def run(self) -> str or None:
+        super().run()
+        if self.is_coordinator:
+            return 'Global Mean'
+        return 'CPM Cutoff'
+
+
+@app_state('Global Mean', Role.COORDINATOR)
+class C1(GlobalMean):
+    def register(self):
+        self.register_transition('CPM Cutoff', Role.COORDINATOR, 'Broadcast shared genes and cohort effects')
+
+    def run(self) -> str or None:
+        super().run()
+        return 'CPM Cutoff'
+
+
+@app_state('CPM Cutoff', Role.BOTH)
+class B2(CPMCutOff):
+    def register(self):
+        self.register_transition('CPM Aggregation', Role.COORDINATOR, 'Gather Library sizes')
+        self.register_transition('Apply CPM Cutoff', Role.PARTICIPANT, 'Wait for global CPM cutoff')
+
+    def run(self) -> str or None:
+        super().run()
+        if self.is_coordinator:
+            return 'CPM Aggregation'
+        return 'Apply CPM Cutoff'
+
+
+@app_state('CPM Aggregation', Role.COORDINATOR)
+class C2(CutOffAggregation):
+    def register(self):
+        self.register_transition('Apply CPM Cutoff', Role.COORDINATOR, 'Broadcast global CPM cutoff')
+
+    def run(self) -> str or None:
+        super().run()
+        return 'Apply CPM Cutoff'
+
+
+@app_state('Apply CPM Cutoff', Role.BOTH)
+class B3(ApplyCPM):
+    def register(self):
+        self.register_transition('Aggregate Gene Names', Role.COORDINATOR, 'Gather genes above the cutoff')
+        self.register_transition('Compute Norm Factors', Role.PARTICIPANT, 'Wait for shared genes above the cutoff')
+
+    def run(self) -> str or None:
+        super().run()
+        if self.is_coordinator:
+            return 'Aggregate Gene Names'
+        return 'Compute Norm Factors'
+
+
+@app_state('Aggregate Gene Names', Role.COORDINATOR)
+class C3(AggregateGeneNames):
+    def register(self):
+        self.register_transition('Compute Norm Factors', Role.COORDINATOR, 'Broadcast shared genes above the cutoff')
+
+    def run(self) -> str or None:
+        super().run()
+        return 'Compute Norm Factors'
+
+
+@app_state('Compute Norm Factors', Role.BOTH)
+class B4(ComputeNormFactors):
+    def register(self):
+        self.register_transition('Aggregate Library Sizes', Role.COORDINATOR, 'Gather upper quartiles and library sizes')
+        self.register_transition('Linear Regression', Role.PARTICIPANT, 'Wait for upper_quartiles / lib_sizes')
+
+    def run(self) -> str or None:
+        super().run()
+        if self.is_coordinator:
+            return 'Aggregate Library Sizes'
+        return 'Linear Regression'
+
+
+@app_state('Aggregate Library Sizes', Role.COORDINATOR)
+class C4(AggregateLibSizes):
+    def register(self):
+        self.register_transition('Linear Regression', Role.COORDINATOR, 'Broadcast upper_quartiles / lib_sizes')
+
+    def run(self) -> str or None:
+        super().run()
+        return 'Linear Regression'
+
+
+@app_state('Linear Regression', Role.BOTH)
+class B5(LinearRegression):
+    def __init__(self):
+        super().__init__()
+
+    def register(self):
+        self.register_transition('Aggregate Regression Parameters', Role.COORDINATOR, "Gather XTX and XTY")
+        self.register_transition('SSE', Role.PARTICIPANT, "Wait for Beta")
+
+    def run(self) -> str or None:
+        super().run()
+        if self.is_coordinator:
+            return 'Aggregate Regression Parameters'
+        return 'SSE'
+
+
+@app_state('Aggregate Regression Parameters', Role.COORDINATOR)
+class C5(AggregateRegression):
+    def register(self):
+        self.register_transition('SSE', Role.COORDINATOR, "Broadcast Beta")
+
+    def run(self) -> str or None:
+        super().run()
+        return 'SSE'
+
+
+@app_state('SSE', Role.BOTH)
+class B6(SSE):
+    def __init__(self):
+        super().__init__()
+
+    def register(self):
+        self.register_transition('Aggregate SSE', Role.COORDINATOR, "Gather local SSE params {sample_count, sse, cov, log_count, log_count_conversion}")
+        self.register_transition('Linear Regression', Role.PARTICIPANT, "Wait for py_lowess")
+        self.register_transition('Write Results', Role.PARTICIPANT, "Wait for global gene expression analysis")
+
+    def run(self) -> str or None:
+        super().run()
+        if self.is_coordinator:
+            self.weighted = not self.weighted
+            return 'Aggregate SSE'
+        if not self.weighted:
+            self.weighted = not self.weighted
+            return 'Linear Regression'
+        return 'Write Results'
+
+
+@app_state('Aggregate SSE', Role.COORDINATOR)
+class C6(AggregateSSE):
+    def __init__(self):
+        super().__init__()
+
+    def register(self):
+        self.register_transition('Linear Regression', Role.COORDINATOR, "Broadcast py_lowess")
+        self.register_transition('terminal', Role.COORDINATOR, "Broadcast Gene expression analysis")
+
+    def run(self) -> str or None:
+        super().run()
+        if not self.weighted:
+            return 'Linear Regression'
+        return 'terminal'
+
+
+@app_state('Write Results', Role.PARTICIPANT)
+class P1(WriteResults):
+
+    def register(self):
+        self.register_transition('terminal', Role.PARTICIPANT, "Terminate app execution")
+
+    def run(self) -> str or None:
+        super().run()
+        return 'terminal'

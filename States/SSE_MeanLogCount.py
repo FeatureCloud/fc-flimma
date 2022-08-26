@@ -25,16 +25,10 @@ from States import get_k_n
 from CustomStates.AckState import AckState
 
 
-@app_state('SSE', Role.BOTH)
 class SSE(AckState):
     def __init__(self):
         self.weighted = False
         self.beta = None
-
-    def register(self):
-        self.register_transition('Aggregate_SSE', Role.COORDINATOR)
-        self.register_transition('Linear_Regression', Role.PARTICIPANT)
-        self.register_transition('Write_Results', Role.PARTICIPANT)
 
     def run(self) -> str or None:
         self.beta = self.await_data()
@@ -47,14 +41,6 @@ class SSE(AckState):
                         log_count_conversion_term.item()]
         names = ['sum_sample_count', 'sum_sse', 'sum_cov', 'sum_log_count', 'sum_log_count_conversion']
         self.communicate_data(data_to_send, names)
-
-        if self.is_coordinator:
-            self.weighted = not self.weighted
-            return 'Aggregate_SSE'
-        if not self.weighted:
-            self.weighted = not self.weighted
-            return 'Linear_Regression'
-        return 'Write_Results'
 
     def communicate_data(self, data, names):
         for d, n in zip(data, names):
@@ -98,15 +84,10 @@ class SSE(AckState):
         return log_count, log_count_conversion_term
 
 
-@app_state('Aggregate_SSE', Role.COORDINATOR)
 class AggregateSSE(AppState):
     def __init__(self):
         self.weighted = False
         self.results = {}
-
-    def register(self):
-        self.register_transition('Linear_Regression', Role.COORDINATOR)
-        self.register_transition('terminal', Role.COORDINATOR)
 
     def run(self) -> str or None:
 
@@ -116,22 +97,22 @@ class AggregateSSE(AppState):
         if not self.weighted:
             self.broadcast_data(self.py_lowess)
             self.weighted = not self.weighted
-            return 'Linear_Regression'
-        self.ebayes_step()
-        self.log('Creating the tabel')
-        df = pd.DataFrame(data={'EFFECTSIZE': self.table['logFC'],
-                                'P': self.table['adj.P.Val'],
-                                'GENE': self.table.index.values
-                                },
-                          columns=['EFFECTSIZE', 'P', 'GENE'],
-                          index=None)
-        df['SNP'] = None
-        df.to_csv(self.load('output_files')['table'][0], sep=",", index=False)
-        data_to_send = np.array([df["EFFECTSIZE"].values.tolist(), df['P'].values.tolist(), df['GENE'].values.tolist()])
-        self.log('Broadcasting the data')
-        self.log(data_to_send.shape)
-        self.broadcast_data(data=data_to_send)
-        return 'terminal'
+        else:
+            self.ebayes_step()
+            self.log('Creating the tabel')
+            df = pd.DataFrame(data={'EFFECTSIZE': self.table['logFC'],
+                                    'P': self.table['adj.P.Val'],
+                                    'GENE': self.table.index.values
+                                    },
+                              columns=['EFFECTSIZE', 'P', 'GENE'],
+                              index=None)
+            df['SNP'] = None
+            df.to_csv(self.load('output_files')['table'][0], sep=",", index=False)
+            data_to_send = np.array(
+                [df["EFFECTSIZE"].values.tolist(), df['P'].values.tolist(), df['GENE'].values.tolist()])
+            self.log('Broadcasting the data')
+            self.log(data_to_send.shape)
+            self.broadcast_data(data=data_to_send)
 
     def aggregate_sse(self):
         self.global_sample_count = np.array(self.load('sum_sample_count')) / len(self.clients)
@@ -495,15 +476,7 @@ class AggregateSSE(AppState):
         self.table = self.table.sort_values(by="P.Value")
 
 
-@app_state('Write_Results', Role.PARTICIPANT)
 class WriteResults(AppState):
-    def __init__(self):
-        self.weighted = False
-        self.results = {}
-
-    def register(self):
-        self.register_transition('terminal', Role.PARTICIPANT)
-
     def run(self) -> str or None:
         self.update(message="Writing results...")
         effect_size, p_values, genes = self.await_data()
@@ -511,4 +484,3 @@ class WriteResults(AppState):
                           columns=['EFFECTSIZE', 'P', 'GENE'], index=None)
         df['SNP'] = None
         df.to_csv(self.load('output_files')['table'][0], sep=",", index=False)
-        return 'terminal'
