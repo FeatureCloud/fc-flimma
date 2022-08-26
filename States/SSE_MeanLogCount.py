@@ -133,7 +133,6 @@ class AggregateSSE(AppState):
         self.broadcast_data(data=data_to_send)
         return 'terminal'
 
-
     def aggregate_sse(self):
         self.global_sample_count = np.array(self.load('sum_sample_count')) / len(self.clients)
         self.total_cov = self.load('sum_cov') / len(self.clients)
