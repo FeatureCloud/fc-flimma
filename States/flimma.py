@@ -33,17 +33,17 @@ class C1(GlobalMean):
 @app_state('Local CPM Cutoff', Role.BOTH)
 class B2(CPMCutOff):
     def register(self):
-        self.register_transition('CPM Median Aggregation', Role.COORDINATOR, 'Gather local cutoffs')
+        self.register_transition('Median cutoff aggregation', Role.COORDINATOR, 'Gather local cutoffs')
         self.register_transition('Apply CPM Cutoff', Role.PARTICIPANT, 'Wait for global CPM cutoff')
 
     def run(self) -> str or None:
         super().run()
         if self.is_coordinator:
-            return 'CPM Median Aggregation'
+            return 'Median cutoff aggregation'
         return 'Apply CPM Cutoff'
 
 
-@app_state('CPM Median Aggregation', Role.COORDINATOR)
+@app_state('Median cutoff aggregation', Role.COORDINATOR)
 class C2(CutOffAggregation):
     def register(self):
         self.register_transition('Apply CPM Cutoff', Role.COORDINATOR, 'Broadcast global CPM cutoff')
@@ -105,7 +105,7 @@ class B5(LinearRegression):
         super().__init__()
 
     def register(self):
-        self.register_transition('Aggregate Regression Parameters', Role.COORDINATOR, "Gather XTX and XTY")
+        self.register_transition('Aggregate Regression Parameters', Role.COORDINATOR, "Gather intercepts and slopes")
         self.register_transition('SSE', Role.PARTICIPANT, "Wait for Beta")
 
     def run(self) -> str or None:
@@ -131,8 +131,8 @@ class B6(SSE):
         super().__init__()
 
     def register(self):
-        self.register_transition('Aggregate SSE', Role.COORDINATOR, "Gather local SSE params {sample_count, sse, cov, log_count, log_count_conversion}")
-        self.register_transition('Linear Regression', Role.PARTICIPANT, "Wait for py_lowess")
+        self.register_transition('Aggregate SSE', Role.COORDINATOR, "Gather local SSE params")
+        self.register_transition('Linear Regression', Role.PARTICIPANT, "Wait for lowess")
         self.register_transition('Write Results', Role.PARTICIPANT, "Wait for global gene expression analysis")
 
     def run(self) -> str or None:
@@ -152,7 +152,7 @@ class C6(AggregateSSE):
         super().__init__()
 
     def register(self):
-        self.register_transition('Linear Regression', Role.COORDINATOR, "Broadcast py_lowess")
+        self.register_transition('Linear Regression', Role.COORDINATOR, "Broadcast lowess")
         self.register_transition('terminal', Role.COORDINATOR, "Broadcast Gene expression analysis")
 
     def run(self) -> str or None:
