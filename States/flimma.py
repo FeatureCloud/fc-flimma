@@ -10,40 +10,40 @@ from .SSE_MeanLogCount import SSE, AggregateSSE, WriteResults
 @app_state(name='initial', role=Role.BOTH, app_name='flimma')
 class B1(LocalMean):
     def register(self):
-        self.register_transition('Global Mean', Role.COORDINATOR, 'Gather local_features and cohort names')
-        self.register_transition('CPM Cutoff', Role.PARTICIPANT, 'Wait for shared genes')
+        self.register_transition('Gene filter', Role.COORDINATOR, 'Gather local gene names names')
+        self.register_transition('Local CPM Cutoff', Role.PARTICIPANT, 'Wait for shared genes')
 
     def run(self) -> str or None:
         super().run()
         if self.is_coordinator:
-            return 'Global Mean'
-        return 'CPM Cutoff'
+            return 'Gene filter'
+        return 'Local CPM Cutoff'
 
 
-@app_state('Global Mean', Role.COORDINATOR)
+@app_state('Gene filter', Role.COORDINATOR)
 class C1(GlobalMean):
     def register(self):
-        self.register_transition('CPM Cutoff', Role.COORDINATOR, 'Broadcast shared genes and cohort effects')
+        self.register_transition('Local CPM Cutoff', Role.COORDINATOR, 'Broadcast shared genes')
 
     def run(self) -> str or None:
         super().run()
-        return 'CPM Cutoff'
+        return 'Local CPM Cutoff'
 
 
-@app_state('CPM Cutoff', Role.BOTH)
+@app_state('Local CPM Cutoff', Role.BOTH)
 class B2(CPMCutOff):
     def register(self):
-        self.register_transition('CPM Aggregation', Role.COORDINATOR, 'Gather Library sizes')
+        self.register_transition('CPM Median Aggregation', Role.COORDINATOR, 'Gather local cutoffs')
         self.register_transition('Apply CPM Cutoff', Role.PARTICIPANT, 'Wait for global CPM cutoff')
 
     def run(self) -> str or None:
         super().run()
         if self.is_coordinator:
-            return 'CPM Aggregation'
+            return 'CPM Median Aggregation'
         return 'Apply CPM Cutoff'
 
 
-@app_state('CPM Aggregation', Role.COORDINATOR)
+@app_state('CPM Median Aggregation', Role.COORDINATOR)
 class C2(CutOffAggregation):
     def register(self):
         self.register_transition('Apply CPM Cutoff', Role.COORDINATOR, 'Broadcast global CPM cutoff')

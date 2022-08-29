@@ -103,7 +103,6 @@ class GlobalMean(AppState):
         self.register_transition('CPM_Cut_Off', Role.COORDINATOR)
 
     def run(self) -> str or None:
-        # self.global_sample_count = (np.array(self.load('summed_sample_counts')) / len(self.clients)).tolist()
 
         self.global_sample_count = (np.array(self.load('global_sample_count')) / len(self.clients)).tolist()
         self.aggregate_cohort_names_and_features()
@@ -112,7 +111,6 @@ class GlobalMean(AppState):
         self.store('n_features', len(self.gene_name_list))
         self.store('cohort_effects', self.cohort_effects)
 
-        # self.broadcast_data(data=[self.gene_name_list, self.cohort_effects, self.global_sample_count])
         self.broadcast_data(data=[self.gene_name_list, self.cohort_effects])
         self.store("server_vars", self.load('group1') + self.load('group2'))
 

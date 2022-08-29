@@ -22,7 +22,6 @@ from time import sleep
 class CPMCutOff(AckState):
 
     def run(self) -> str or None:
-        self.log("Enetr CPM ")
         shared_features, cohort_effects = self.await_data()
         self.log("CPM received")
         if len(shared_features) != len(self.load('local_features')):
