@@ -79,20 +79,20 @@ class C3(AggregateGeneNames):
 @app_state('Compute Norm Factors', Role.BOTH)
 class B4(ComputeNormFactors):
     def register(self):
-        self.register_transition('Aggregate Library Sizes', Role.COORDINATOR, 'Gather upper quartiles and library sizes')
-        self.register_transition('Linear Regression', Role.PARTICIPANT, 'Wait for upper_quartiles / lib_sizes')
+        self.register_transition('UQ norm factor aggregation', Role.COORDINATOR, 'Gather upper local norm factors')
+        self.register_transition('Linear Regression', Role.PARTICIPANT, 'Wait for global UQ factor')
 
     def run(self) -> str or None:
         super().run()
         if self.is_coordinator:
-            return 'Aggregate Library Sizes'
+            return 'UQ norm factor aggregation'
         return 'Linear Regression'
 
 
-@app_state('Aggregate Library Sizes', Role.COORDINATOR)
+@app_state('UQ norm factor aggregation', Role.COORDINATOR)
 class C4(AggregateLibSizes):
     def register(self):
-        self.register_transition('Linear Regression', Role.COORDINATOR, 'Broadcast upper_quartiles / lib_sizes')
+        self.register_transition('Linear Regression', Role.COORDINATOR, 'Broadcast global UQ factor')
 
     def run(self) -> str or None:
         super().run()

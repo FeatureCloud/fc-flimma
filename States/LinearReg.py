@@ -21,28 +21,23 @@ from States import get_k_n
 from CustomStates.AckState import AckState
 
 
-
 class LinearRegression(AckState):
     def __init__(self):
         self.weighted = False
 
-
-
     def run(self) -> str or None:
         if self.weighted:
-            print("Weighted Regression")
+            self.log("Weighted Regression")
             py_lowess = self.await_data()
             self.weight_step(py_lowess)
         else:
-            print("Regression")
+            self.log("Regression")
             f = self.await_data()
-            print("F received!!!")
             self.store('norm_factors', self.load('upper_quartile') / self.load('lib_sizes') / f)
         self.compute_log_cpm()
         self.compute_linear_regression_parameters()
         self.weighted = not self.weighted
         self.communicate_data()
-
 
     def communicate_data(self):
         data_to_send = js_serializer.prepare(self.load('xt_x')) if self.load('smpc_used') else self.load('xt_x')
@@ -102,7 +97,6 @@ class LinearRegression(AckState):
         self.store('weight', lo(fitted_log_counts) ** -4)
 
 
-
 class AggregateRegression(AppState):
 
     def run(self) -> str or None:
@@ -125,4 +119,3 @@ class AggregateRegression(AppState):
         self.broadcast_data(beta)
         self.store('beta', beta)
         self.store('std_unscaled', std_unscaled)
-

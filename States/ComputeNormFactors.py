@@ -16,9 +16,7 @@ from FeatureCloud.app.engine.app import app_state, AppState, Role, SMPCOperation
 import numpy as np
 
 
-
 class ComputeNormFactors(AppState):
-
 
     def run(self) -> str or None:
         filtered_genes = self.await_data()
@@ -41,5 +39,3 @@ class AggregateLibSizes(AppState):
 
         quart_to_lib_size = upper_quartiles / lib_sizes
         self.broadcast_data(np.exp(np.mean(np.log(quart_to_lib_size))))
-
-

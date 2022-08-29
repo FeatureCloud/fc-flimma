@@ -17,6 +17,7 @@ import numpy as np
 from States import tol
 from utils import js_serializer
 
+
 class ApplyCPM(AppState):
 
     def run(self) -> str or None:
@@ -24,13 +25,12 @@ class ApplyCPM(AppState):
         lib_sizes = self.load('counts_df').sum(axis=0)
         cpm = self.load('counts_df') / (lib_sizes * self.load('norm_factors') + 1) * 10 ** 6
         cpm_cutoff_sample_count = cpm[cpm >= cpm_cutoff].apply(lambda x: sum(x.notnull().values), axis=1).values
-        data_to_send = js_serializer.prepare(cpm_cutoff_sample_count) if self.load('smpc_used') else cpm_cutoff_sample_count
+        data_to_send = js_serializer.prepare(cpm_cutoff_sample_count) if self.load(
+            'smpc_used') else cpm_cutoff_sample_count
         self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'))
 
 
-
 class AggregateGeneNames(AppState):
-
 
     def run(self) -> str or None:
         summ_cpm_cutoff_sample_count = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
@@ -42,4 +42,3 @@ class AggregateGeneNames(AppState):
         self.store('gene_name_list', np.array(self.load('gene_name_list'))[intersect].tolist())
         self.log(f"features passed both cutoffs: {len(self.load('gene_name_list'))}")
         self.broadcast_data(self.load('gene_name_list'))
-
