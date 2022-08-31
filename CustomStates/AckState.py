@@ -17,7 +17,7 @@ ACKNOWLEDGE = "FC_ACK"
 
 
 class AckState(AppState):
-    def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False, get_ack=False):
+    def _send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False, get_ack=False):
         super(AckState, self).send_data_to_coordinator(data, send_to_self, use_smpc)
         if get_ack and not self.is_coordinator:
             ack = self.await_data()
@@ -25,14 +25,30 @@ class AckState(AppState):
                 self.log(f"Wrong Acknowledge code: {ack}", LogLevel.FATAL)
                 self.update(state=State.ERROR)
 
-    def gather_data(self, is_json=False, ack=False):
+    def _gather_data(self, is_json: bool = False, ack: bool = False):
         data = super(AckState, self).gather_data()
         if ack:
             self.broadcast_data(data=ACKNOWLEDGE, send_to_self=False)
         return data
 
-    def aggregate_data(self, operation: SMPCOperation, use_smpc=False, ack=False):
+    def _aggregate_data(self, operation: SMPCOperation = SMPCOperation.ADD, use_smpc: bool = False, ack: bool = False):
         data = super(AckState, self).aggregate_data(operation, use_smpc)
         if ack:
             self.broadcast_data(data=ACKNOWLEDGE, send_to_self=False)
         return data
+
+    def send_multiple_data(self, data: list, params: list):
+        for d, p in zip(data, params):
+            self._send_data_to_coordinator(data=d, **p, get_ack=True)
+
+    def instant_aggregate(self, name: str, data: list, use_smpc: bool = False, operation: SMPCOperation = SMPCOperation.ADD):
+        self._send_data_to_coordinator(data=data, use_smpc=use_smpc, get_ack=True)
+        if self.is_coordinator:
+            aggregated_data = self._aggregate_data(operation=operation, use_smpc=use_smpc, ack=True)
+            self.store(name, aggregated_data)
+
+    def instant_gather(self, name: str, data: list, is_json: bool = False):
+        self._send_data_to_coordinator(data=data, use_smpc=False, get_ack=True)
+        if self.is_coordinator:
+            gathered_data = self._gather_data(is_json=is_json, ack=True)
+            self.store(name, gathered_data)
