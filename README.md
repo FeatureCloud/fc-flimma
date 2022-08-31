@@ -1,11 +1,11 @@
 ## [FeatureCloud Flimma app](https://featurecloud.ai/app/flimma)
 ### Federated version of state of the art Limma Voom application
 <p><b>Flimma</b> is a federated privacy-aware version of state-of-the art differential expression analysis method <a href="https://bioconductor.org/packages/release/bioc/html/limma.html"><i><b>limma voom</b></i></a>.</p> 
-   <p>Publiation: <a href="https://genomebiology.biomedcentral.com/articles/10.1186/s13059-021-02553-2"<i><b> BMC Genome Biology (2021)</b></i></a>.</p> 
+   <p>Publication: <a href="https://genomebiology.biomedcentral.com/articles/10.1186/s13059-021-02553-2"<i><b> BMC Genome Biology (2021)</b></i></a>.</p> 
    
    <p><b>FeatureCloud Flimma app</b> is implemented based on <a href="https://exbio.wzw.tum.de/flimma/"<i>exbio.wzw.tum.de/flimma/</i></a></p> 
 
-![state diagram](data/images/state_diagram.png)
+![state diagram](data/images/state_diagram_plot.png)
 
 ### Config
 
