@@ -10,8 +10,8 @@ from .SSE_MeanLogCount import SSE, AggregateSSE, WriteResults
 @app_state(name='initial', role=Role.BOTH, app_name='flimma')
 class B1(LocalMean):
     def register(self):
-        self.register_transition('Gene filter', Role.COORDINATOR, 'Gather local gene names')
-        self.register_transition('Local CPM Cutoff', Role.PARTICIPANT, 'Wait for shared genes')
+        self.register_transition('Gene filter', Role.COORDINATOR, label='Gather local gene names')
+        self.register_transition('Local CPM Cutoff', Role.PARTICIPANT, label='Wait for shared genes')
 
     def run(self) -> str or None:
         super().run()
@@ -23,7 +23,7 @@ class B1(LocalMean):
 @app_state('Gene filter', Role.COORDINATOR)
 class C1(GlobalMean):
     def register(self):
-        self.register_transition('Local CPM Cutoff', Role.COORDINATOR, 'Broadcast shared genes')
+        self.register_transition('Local CPM Cutoff', Role.COORDINATOR, label='Broadcast shared genes')
 
     def run(self) -> str or None:
         super().run()
@@ -33,8 +33,8 @@ class C1(GlobalMean):
 @app_state('Local CPM Cutoff', Role.BOTH)
 class B2(CPMCutOff):
     def register(self):
-        self.register_transition('Median cutoff aggregation', Role.COORDINATOR, 'Gather local cutoffs')
-        self.register_transition('Apply CPM Cutoff', Role.PARTICIPANT, 'Wait for global CPM cutoff')
+        self.register_transition('Median cutoff aggregation', Role.COORDINATOR, label='Gather local cutoffs')
+        self.register_transition('Apply CPM Cutoff', Role.PARTICIPANT, label='Wait for global CPM cutoff')
 
     def run(self) -> str or None:
         super().run()
@@ -46,7 +46,7 @@ class B2(CPMCutOff):
 @app_state('Median cutoff aggregation', Role.COORDINATOR)
 class C2(CutOffAggregation):
     def register(self):
-        self.register_transition('Apply CPM Cutoff', Role.COORDINATOR, 'Broadcast global CPM cutoff')
+        self.register_transition('Apply CPM Cutoff', Role.COORDINATOR, label='Broadcast global CPM cutoff')
 
     def run(self) -> str or None:
         super().run()
@@ -56,8 +56,8 @@ class C2(CutOffAggregation):
 @app_state('Apply CPM Cutoff', Role.BOTH)
 class B3(ApplyCPM):
     def register(self):
-        self.register_transition('Aggregate Gene Names', Role.COORDINATOR, 'Gather genes above the cutoff')
-        self.register_transition('Compute Norm Factors', Role.PARTICIPANT, 'Wait for shared genes above the cutoff')
+        self.register_transition('Aggregate Gene Names', Role.COORDINATOR, label='Gather genes above the cutoff')
+        self.register_transition('Compute Norm Factors', Role.PARTICIPANT, label='Wait for shared genes above the cutoff')
 
     def run(self) -> str or None:
         super().run()
@@ -69,7 +69,7 @@ class B3(ApplyCPM):
 @app_state('Aggregate Gene Names', Role.COORDINATOR)
 class C3(AggregateGeneNames):
     def register(self):
-        self.register_transition('Compute Norm Factors', Role.COORDINATOR, 'Broadcast shared genes above the cutoff')
+        self.register_transition('Compute Norm Factors', Role.COORDINATOR, label='Broadcast shared genes above the cutoff')
 
     def run(self) -> str or None:
         super().run()
@@ -79,8 +79,8 @@ class C3(AggregateGeneNames):
 @app_state('Compute Norm Factors', Role.BOTH)
 class B4(ComputeNormFactors):
     def register(self):
-        self.register_transition('UQ norm factor aggregation', Role.COORDINATOR, 'Gather upper local norm factors')
-        self.register_transition('Linear Regression', Role.PARTICIPANT, 'Wait for global UQ factor')
+        self.register_transition('UQ norm factor aggregation', Role.COORDINATOR, label='Gather upper local norm factors')
+        self.register_transition('Linear Regression', Role.PARTICIPANT, label='Wait for global UQ factor')
 
     def run(self) -> str or None:
         super().run()
@@ -92,7 +92,7 @@ class B4(ComputeNormFactors):
 @app_state('UQ norm factor aggregation', Role.COORDINATOR)
 class C4(AggregateLibSizes):
     def register(self):
-        self.register_transition('Linear Regression', Role.COORDINATOR, 'Broadcast global UQ factor')
+        self.register_transition('Linear Regression', Role.COORDINATOR, label='Broadcast global UQ factor')
 
     def run(self) -> str or None:
         super().run()
@@ -105,8 +105,8 @@ class B5(LinearRegression):
         super().__init__()
 
     def register(self):
-        self.register_transition('Aggregate Regression Parameters', Role.COORDINATOR, "Gather intercepts and slopes")
-        self.register_transition('SSE', Role.PARTICIPANT, "Wait for Beta")
+        self.register_transition('Aggregate Regression Parameters', Role.COORDINATOR, label="Gather intercepts and slopes")
+        self.register_transition('SSE', Role.PARTICIPANT, label="Wait for Beta")
 
     def run(self) -> str or None:
         super().run()
@@ -118,7 +118,7 @@ class B5(LinearRegression):
 @app_state('Aggregate Regression Parameters', Role.COORDINATOR)
 class C5(AggregateRegression):
     def register(self):
-        self.register_transition('SSE', Role.COORDINATOR, "Broadcast Beta")
+        self.register_transition('SSE', Role.COORDINATOR, label="Broadcast Beta")
 
     def run(self) -> str or None:
         super().run()
@@ -131,9 +131,9 @@ class B6(SSE):
         super().__init__()
 
     def register(self):
-        self.register_transition('Aggregate SSE', Role.COORDINATOR, "Gather local SSE params")
-        self.register_transition('Linear Regression', Role.PARTICIPANT, "Wait for lowess")
-        self.register_transition('Write Results', Role.PARTICIPANT, "Wait for global gene expression analysis")
+        self.register_transition('Aggregate SSE', Role.COORDINATOR, label="Gather local SSE params")
+        self.register_transition('Linear Regression', Role.PARTICIPANT, label="Wait for lowess")
+        self.register_transition('Write Results', Role.PARTICIPANT, label="Wait for global gene expression analysis")
 
     def run(self) -> str or None:
         super().run()
@@ -152,8 +152,8 @@ class C6(AggregateSSE):
         super().__init__()
 
     def register(self):
-        self.register_transition('Linear Regression', Role.COORDINATOR, "Broadcast lowess")
-        self.register_transition('terminal', Role.COORDINATOR, "Broadcast Gene expression analysis")
+        self.register_transition('Linear Regression', Role.COORDINATOR, label="Broadcast lowess")
+        self.register_transition('terminal', Role.COORDINATOR, label="Broadcast Gene expression analysis")
 
     def run(self) -> str or None:
         super().run()
@@ -166,7 +166,7 @@ class C6(AggregateSSE):
 class P1(WriteResults):
 
     def register(self):
-        self.register_transition('terminal', Role.PARTICIPANT, "Terminate app execution")
+        self.register_transition('terminal', Role.PARTICIPANT, label="Terminate app execution")
 
     def run(self) -> str or None:
         super().run()
