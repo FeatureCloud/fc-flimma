@@ -10,7 +10,7 @@ from .SSE_MeanLogCount import SSE, AggregateSSE, WriteResults
 @app_state(name='initial', role=Role.BOTH, app_name='flimma')
 class B1(LocalMean):
     def register(self):
-        self.register_transition('Gene filter', Role.COORDINATOR, 'Gather local gene names names')
+        self.register_transition('Gene filter', Role.COORDINATOR, 'Gather local gene names')
         self.register_transition('Local CPM Cutoff', Role.PARTICIPANT, 'Wait for shared genes')
 
     def run(self) -> str or None:
