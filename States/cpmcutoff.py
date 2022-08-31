@@ -12,7 +12,7 @@
     limitations under the License.
 """
 
-from FeatureCloud.app.engine.app import app_state, AppState, Role, SMPCOperation
+from FeatureCloud.app.engine.app import AppState, Role, SMPCOperation
 import numpy as np
 from States import large_n, min_prop, tol
 from CustomStates.AckState import AckState
@@ -46,19 +46,9 @@ class CPMCutOff(AckState):
         self.store('variables', self.load('group1') + self.load('group2') + self.load('confounders') + cohort_effects)
         self.store('design_df', design_df.loc[:, self.load('variables')])
         self.log("###### Send out data")
-        self.send_data_to_coordinator(data=self.load('design_df').sum(axis=0).values.astype('int').tolist(),
-                                      use_smpc=self.load('smpc_used'),
-                                      get_ack=True)
-        if self.is_coordinator:
-            self.store('total_num_samples',
-                       self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'), ack=True)
-                       )
-
-        # self.log('total_num_samples communicated')
-        self.send_data_to_coordinator(data=self.load('counts_df').sum(axis=0).values, use_smpc=False, get_ack=True)
-        if self.is_coordinator:
-            self.store('clients_lib_sizes', self.gather_data(ack=True))
-        # self.log('clients_lib_sizes communicated')
+        data_to_send = self.load('design_df').sum(axis=0).values.astype('int').tolist()
+        self.instant_aggregate(name='total_num_samples', data=data_to_send, use_smpc=self.load('smpc_used'))
+        self.instant_gather(name='clients_lib_sizes', data=self.load('counts_df').sum(axis=0).values)
         self.send_data_to_coordinator(data=self.load('counts_df').sum(axis=1).values.astype('int').tolist(),
                                       use_smpc=self.load('smpc_used')
                                       )

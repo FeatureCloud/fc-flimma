@@ -12,7 +12,7 @@
     limitations under the License.
 """
 
-from FeatureCloud.app.engine.app import app_state, AppState, Role, SMPCOperation, LogLevel
+from FeatureCloud.app.engine.app import AppState
 import pandas as pd
 import numpy as np
 from scipy import linalg
@@ -34,21 +34,13 @@ class SSE(AckState):
         self.beta = self.await_data()
         self.compute_sse_step_parameters()
         log_count, log_count_conversion_term = self.mean_log_count_step()
-        data_to_send = [self.load('local_sample_count'),
-                        self.load('sse'),
-                        self.load('cov_coefficient'),
-                        log_count,
-                        log_count_conversion_term.item()]
-        names = ['sum_sample_count', 'sum_sse', 'sum_cov', 'sum_log_count', 'sum_log_count_conversion']
-        self.communicate_data(data_to_send, names)
-
-    def communicate_data(self, data, names):
-        for d, n in zip(data, names):
-            self.send_data_to_coordinator(data=d, use_smpc=self.load('smpc_used'), get_ack=True)
-            if self.is_coordinator:
-                self.store(n,
-                           self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'), ack=True)
-                           )
+        data_to_send = {'sum_sample_count': self.load('local_sample_count'),
+                        'sum_sse': self.load('sse'),
+                        'sum_cov':self.load('cov_coefficient'),
+                        'sum_log_count': log_count,
+                        'sum_log_count_conversion': log_count_conversion_term.item()}
+        for name, data in data_to_send.items():
+            self.instant_aggregate(name=name, data=data, use_smpc=self.load('smpc_used'))
 
     def compute_sse_step_parameters(self):
         x_matrix = self.load('design_df').values

@@ -12,7 +12,7 @@
     limitations under the License.
 """
 
-from FeatureCloud.app.engine.app import app_state, AppState, Role, SMPCOperation, LogLevel
+from FeatureCloud.app.engine.app import AppState, SMPCOperation
 import numpy as np
 from scipy import linalg
 from scipy.interpolate import interp1d
@@ -41,12 +41,7 @@ class LinearRegression(AckState):
 
     def communicate_data(self):
         data_to_send = js_serializer.prepare(self.load('xt_x')) if self.load('smpc_used') else self.load('xt_x')
-        self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'), get_ack=True)
-
-        if self.is_coordinator:
-            self.store('sum_xt_x',
-                       self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'), ack=True)
-                       )
+        self.instant_aggregate(name='sum_xt_x', data=data_to_send, use_smpc=self.load('smpc_used'))
         data_to_send = js_serializer.prepare(self.load('xt_y')) if self.load('smpc_used') else self.load('xt_y')
         self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'))
 

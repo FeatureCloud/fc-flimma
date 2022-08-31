@@ -11,7 +11,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 """
-from FeatureCloud.app.engine.app import app_state, AppState, Role, SMPCOperation, LogLevel
+from FeatureCloud.app.engine.app import AppState, Role
 from CustomStates.AckState import AckState
 from FeatureCloud.app.engine.app import State as op_state
 import numpy as np
@@ -42,11 +42,7 @@ class LocalMean(ConfigState.State, AckState):
                 data_to_send = data_to_send.tolist()
 
         self.log(f"**** Data: {data_to_send}")
-        self.send_data_to_coordinator(data=data_to_send, use_smpc=self.load('smpc_used'), get_ack=True)
-        if self.is_coordinator:
-            self.store('global_sample_count',
-                       self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load("smpc_used"), ack=True)
-                       )
+        self.instant_aggregate(name='global_sample_count', data=data_to_send, use_smpc=self.load('smpc_used'))
 
         data_to_send = [self.load('local_features'), self.load('cohort_name')]
         self.log(f"### {[type(d) for d in data_to_send]}")
@@ -89,7 +85,6 @@ class LocalMean(ConfigState.State, AckState):
         # name cohort
         self.store('cohort_name', "Cohort_" + self.id)
         self.store('norm_factors', np.ones(counts_df.shape[1]))
-
 
 
 class GlobalMean(AppState):
