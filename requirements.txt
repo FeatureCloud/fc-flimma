@@ -1,3 +1,4 @@
+featurecloud
 bottle
 jsonpickle
 joblib
@@ -6,6 +7,5 @@ bios
 pydot
 pyyaml
 pandas
-scipy==1.5.4
-statsmodels==0.12.2
-featurecloud
+scipy
+statsmodels
