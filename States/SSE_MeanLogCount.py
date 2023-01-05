@@ -86,24 +86,19 @@ class AggregateSSE(AppState):
         self.aggregate_sse()
         self.aggregate_mean_log_count()
 
-        if not self.weighted:
+        if self.weighted:
             self.broadcast_data(self.py_lowess)
-            self.weighted = not self.weighted
+            # self.weighted = not self.weighted
         else:
             self.ebayes_step()
-            self.log('Creating the tabel')
-            df = pd.DataFrame(data={'EFFECTSIZE': self.table['logFC'],
-                                    'P': self.table['adj.P.Val'],
-                                    'GENE': self.table.index.values
-                                    },
-                              columns=['EFFECTSIZE', 'P', 'GENE'],
-                              index=None)
-            df['SNP'] = None
-            df.to_csv(self.load('output_files')['table'][0], sep=",", index=False)
-            data_to_send = np.array(
-                [df["EFFECTSIZE"].values.tolist(), df['P'].values.tolist(), df['GENE'].values.tolist()])
+            self.table["GENE"] = self.table.index
+            self.table.rename(columns={'logFC': "EFFECTSIZE", 'adj.P.Val': "P"}).to_csv("/mnt/output/tabel.csv", sep=",")
+            # self.table.to_csv("/mnt/output/tabel.csv", sep=",")
+            data_to_send = [self.table['logFC'].values, self.table['adj.P.Val'].values, self.table.index.values]
+            self.store('effectsize', data_to_send[0])
+            self.store('P', data_to_send[1])
+            self.store('gene', data_to_send[2])
             self.log('Broadcasting the data')
-            self.log(data_to_send.shape)
             self.broadcast_data(data=data_to_send)
 
     def aggregate_sse(self):
@@ -471,8 +466,14 @@ class AggregateSSE(AppState):
 class WriteResults(AppState):
     def run(self) -> str or None:
         self.update(message="Writing results...")
-        effect_size, p_values, genes = self.await_data()
+        if self.is_coordinator:
+            effect_size = self.load('effectsize')
+            p_values = self.load('P')
+            genes = self.load('gene')
+        else:
+            effect_size, p_values, genes = self.await_data()
         df = pd.DataFrame(data={'EFFECTSIZE': effect_size, 'P': p_values, 'GENE': genes},
                           columns=['EFFECTSIZE', 'P', 'GENE'], index=None)
         df['SNP'] = None
+        self.log(f"Write the results as {self.load('output_files')['table'][0]}")
         df.to_csv(self.load('output_files')['table'][0], sep=",", index=False)

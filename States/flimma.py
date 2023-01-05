@@ -14,6 +14,7 @@ class B1(LocalMean):
         self.register_transition('Local CPM Cutoff', Role.PARTICIPANT, label='Wait for shared genes')
 
     def run(self) -> str or None:
+        self.store("weighted", False)
         super().run()
         if self.is_coordinator:
             return 'Gene filter'
@@ -109,6 +110,7 @@ class B5(LinearRegression):
         self.register_transition('SSE', Role.PARTICIPANT, label="Wait for Beta")
 
     def run(self) -> str or None:
+        self.weighted = self.load("weighted")
         super().run()
         if self.is_coordinator:
             return 'Aggregate Regression Parameters'
@@ -136,12 +138,14 @@ class B6(SSE):
         self.register_transition('Write Results', Role.PARTICIPANT, label="Wait for global gene expression analysis")
 
     def run(self) -> str or None:
+        self.weighted = self.load("weighted")
         super().run()
+        # self.weighted = self.load("weighted")
+        self.weighted = not self.weighted
+        self.store("weighted", self.weighted)
         if self.is_coordinator:
-            self.weighted = not self.weighted
             return 'Aggregate SSE'
-        if not self.weighted:
-            self.weighted = not self.weighted
+        if self.weighted:
             return 'Linear Regression'
         return 'Write Results'
 
@@ -153,20 +157,22 @@ class C6(AggregateSSE):
 
     def register(self):
         self.register_transition('Linear Regression', Role.COORDINATOR, label="Broadcast lowess")
-        self.register_transition('terminal', Role.COORDINATOR, label="Broadcast Gene expression analysis")
+        self.register_transition('Write Results', Role.COORDINATOR, label="Broadcast Gene expression analysis")
 
     def run(self) -> str or None:
+        self.weighted = self.load("weighted")
         super().run()
-        if not self.weighted:
+        self.store("weighted", self.weighted)
+        if self.weighted:
             return 'Linear Regression'
-        return 'terminal'
+        return 'Write Results'
 
 
-@app_state('Write Results', Role.PARTICIPANT)
+@app_state('Write Results', Role.BOTH)
 class P1(WriteResults):
 
     def register(self):
-        self.register_transition('terminal', Role.PARTICIPANT, label="Terminate app execution")
+        self.register_transition('terminal', Role.BOTH, label="Terminate app execution")
 
     def run(self) -> str or None:
         super().run()
