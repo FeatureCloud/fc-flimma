@@ -43,10 +43,7 @@ class LocalMean(ConfigState.State, AckState):
 
         self.log(f"**** Data: {data_to_send}")
         self.instant_aggregate(name='global_sample_count', data=data_to_send, use_smpc=self.load('smpc_used'))
-
-        data_to_send = [self.load('local_features'), self.load('cohort_name')]
-        self.log(f"### {[type(d) for d in data_to_send]}")
-        self.send_data_to_coordinator(data=data_to_send, use_smpc=False)
+        self.send_data_to_coordinator(data=self.load('local_features'), use_smpc=False)
 
     def read(self):
         counts_df, design_df = readfiles(self.load('input_files')['counts'][0],
@@ -100,7 +97,8 @@ class GlobalMean(AppState):
     def run(self) -> str or None:
 
         self.global_sample_count = (np.array(self.load('global_sample_count')) / len(self.clients)).tolist()
-        self.aggregate_cohort_names_and_features()
+        clients_features = self.gather_data()
+        self.aggregate_features(clients_features)
         self.log_data()
         self.store('gene_name_list', self.gene_name_list)
         self.store('n_features', len(self.gene_name_list))
@@ -109,13 +107,13 @@ class GlobalMean(AppState):
         self.broadcast_data(data=[self.gene_name_list, self.cohort_effects])
         self.store("server_vars", self.load('group1') + self.load('group2'))
 
-    def aggregate_cohort_names_and_features(self):
-        feature_lists, cohort_names = [], []
-        for client_data in self.gather_data():
-            feature_lists.append(client_data[0])
-            cohort_names.append(client_data[1])
-        self.store('cohort_names', cohort_names)
-        self.cohort_effects = sorted(cohort_names)[:-1]
+    def aggregate_features(self, clients_features):
+        feature_lists = []
+        for client_data in clients_features:
+            feature_lists.append(client_data)
+        self.store('cohort_names', [f"Cohort_{id}" for id in self.clients])
+        self.cohort_effects = [f"Cohort_{id}" for id in self.clients if id != self.id]
+
         shared_features = set(feature_lists[0])
         for feature_list in feature_lists[1:]:
             shared_features = shared_features.intersection(set(feature_list))
