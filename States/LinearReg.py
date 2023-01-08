@@ -95,10 +95,10 @@ class LinearRegression(AckState):
 class AggregateRegression(AppState):
 
     def run(self) -> str or None:
-        global_xt_x = np.array(self.load('sum_xt_x')) / len(self.clients)
+        global_xt_x = np.array(self.load('sum_xt_x'))
         self.log(f"XTX: {global_xt_x.shape}")
         sum_xt_y = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
-        global_xt_y = np.array(sum_xt_y) / len(self.clients)
+        global_xt_y = np.array(sum_xt_y)
         self.log(f"XTY: {global_xt_y.shape}")
         k, n = get_k_n(self.load('server_vars'), self.load('confounders'), self.load('cohort_names'),
                        self.load('gene_name_list'))
