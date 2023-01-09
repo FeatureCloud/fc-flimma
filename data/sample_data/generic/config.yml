@@ -14,6 +14,6 @@ flimma:
   group2: Basal
   confounders: diagnosis_age,stage
   result:
-    table: results.csv
+    table: volcano_data.csv
     volcano: volcano
 
