@@ -34,7 +34,7 @@ class AggregateGeneNames(AppState):
 
     def run(self) -> str or None:
         summ_cpm_cutoff_sample_count = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
-        total_cpm_cutoff_sample_count = np.array(summ_cpm_cutoff_sample_count) / len(self.clients)
+        total_cpm_cutoff_sample_count = np.array(summ_cpm_cutoff_sample_count)
         genes_passed_cpm_cutoff = \
             np.where(total_cpm_cutoff_sample_count > self.load('min_per_group_num_samples') - tol)[0]
         self.log(f"features passed CPM cutoff: {len(genes_passed_cpm_cutoff)}")
