@@ -34,16 +34,14 @@ class CPMCutOff(AckState):
         self.store('local_features', shared_features)
         design_df = self.load('design_df')
         # receive the list of cohort names (i.e. client ids)
-        # add variables modeling cohort effects to the design matrix for all but the last cohorts
-        for cohort, id in cohort_effects.items():  # add n-1 columns for n cohorts
-            design_df[cohort] = 1 if self.id == id else 0
+        # add variables modeling cohort effects to the design matrix for all but the coordinator
+        for cohort_name, id in cohort_effects.items():  # add n-1 columns for n cohorts
+            design_df[cohort_name] = 1 if self.id == id else 0
         self.store('design_df', design_df)
-
-        self.log(cohort_effects)
         self.log(design_df.head(2))
 
         # compute local parameters for CPM cutoff
-        self.store('variables', self.load('group1') + self.load('group2') + self.load('confounders') + list(cohort_effects.values()))
+        self.store('variables', self.load('group1') + self.load('group2') + self.load('confounders') + list(cohort_effects.keys()))
         self.store('design_df', design_df.loc[:, self.load('variables')])
         self.log("###### Send out data")
         data_to_send = self.load('design_df').sum(axis=0).values.astype('int').tolist()
