@@ -112,7 +112,7 @@ class GlobalMean(AppState):
         for client_data in clients_features:
             feature_lists.append(client_data)
         self.store('cohort_names', [f"Cohort_{id}" for id in self.clients])
-        self.cohort_effects = [f"Cohort_{id}" for id in self.clients if id != self.id]
+        self.cohort_effects = {id: ind for ind, id in enumerate(self.clients) if id != self.id}
 
         shared_features = set(feature_lists[0])
         for feature_list in feature_lists[1:]:
