@@ -12,7 +12,7 @@ flimma:
   min_total_count: 15
   group1: Lum
   group2: Basal
-  confounders: diagnosis_age,stage
+  confounders: diagnosis_age,stage,cohort1,cohort2
   result:
     table: volcano_data.csv
     volcano: volcano
