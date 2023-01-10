@@ -92,7 +92,7 @@ class AggregateSSE(AppState):
         else:
             self.ebayes_step()
             self.table["GENE"] = self.table.index
-            self.table.rename(columns={'logFC': "EFFECTSIZE", 'adj.P.Val': "P"}).to_csv("/mnt/output/tabel.csv", sep=",")
+            self.table.rename(columns={'logFC': "EFFECTSIZE", 'P': "P.Value"}).to_csv("/mnt/output/tabel.csv", sep=",")
             # self.table.to_csv("/mnt/output/tabel.csv", sep=",")
             data_to_send = [self.table['logFC'].values, self.table['adj.P.Val'].values, self.table.index.values]
             self.store('effectsize', data_to_send[0])
@@ -102,9 +102,9 @@ class AggregateSSE(AppState):
             self.broadcast_data(data=data_to_send)
 
     def aggregate_sse(self):
-        self.global_sample_count = np.array(self.load('sum_sample_count')) / len(self.clients)
-        self.total_cov = self.load('sum_cov') / len(self.clients)
-        self.sse = self.load('sum_sse') / len(self.clients)
+        self.global_sample_count = np.array(self.load('sum_sample_count'))
+        self.total_cov = self.load('sum_cov')
+        self.sse = self.load('sum_sse')
         self.cov_coefficient = linalg.inv(self.total_cov)
         k, n = get_k_n(self.load('server_vars'), self.load('confounders'), self.load('cohort_names'),
                        self.load('gene_name_list'))
@@ -118,8 +118,8 @@ class AggregateSSE(AppState):
         self.degree_of_freedom = np.ones(n) * (self.global_sample_count - k)
 
     def aggregate_mean_log_count(self):
-        self.total_log_count = self.load('sum_log_count') / len(self.clients)
-        self.total_log_count_conversion = self.load('sum_log_count_conversion') / len(self.clients)
+        self.total_log_count = self.load('sum_log_count')
+        self.total_log_count_conversion = self.load('sum_log_count_conversion')
         self.total_log_count_conversion = self.total_log_count_conversion / self.global_sample_count - 6 * np.log2(10)
         self.mean_count = self.total_log_count / self.global_sample_count
         self.mean_log_count = self.mean_count + self.total_log_count_conversion
