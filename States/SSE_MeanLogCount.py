@@ -23,6 +23,7 @@ from statsmodels.stats.multitest import multipletests
 from copy import copy
 from States import get_k_n
 from CustomStates.AckState import AckState
+from visualizer import plot_volcano
 
 
 class SSE(AckState):
@@ -36,7 +37,7 @@ class SSE(AckState):
         log_count, log_count_conversion_term = self.mean_log_count_step()
         data_to_send = {'sum_sample_count': self.load('local_sample_count'),
                         'sum_sse': self.load('sse'),
-                        'sum_cov':self.load('cov_coefficient'),
+                        'sum_cov': self.load('cov_coefficient'),
                         'sum_log_count': log_count,
                         'sum_log_count_conversion': log_count_conversion_term.item()}
         for name, data in data_to_send.items():
@@ -92,14 +93,11 @@ class AggregateSSE(AppState):
         else:
             self.ebayes_step()
             self.table["GENE"] = self.table.index
-            self.table.rename(columns={'logFC': "EFFECTSIZE", 'P': "P.Value"}).to_csv("/mnt/output/tabel.csv", sep=",")
-            # self.table.to_csv("/mnt/output/tabel.csv", sep=",")
-            data_to_send = [self.table['logFC'].values, self.table['adj.P.Val'].values, self.table.index.values]
-            self.store('effectsize', data_to_send[0])
-            self.store('P', data_to_send[1])
-            self.store('gene', data_to_send[2])
-            self.log('Broadcasting the data')
-            self.broadcast_data(data=data_to_send)
+            self.table["EFFECTSIZE"] = self.table["logFC"]
+            self.table["P"] = self.table["P.Value"]
+            self.table["SNP"] = 0
+            self.table = self.table.reset_index()
+            self.broadcast_data(self.table)
 
     def aggregate_sse(self):
         self.global_sample_count = np.array(self.load('sum_sample_count'))
@@ -466,14 +464,7 @@ class AggregateSSE(AppState):
 class WriteResults(AppState):
     def run(self) -> str or None:
         self.update(message="Writing results...")
-        if self.is_coordinator:
-            effect_size = self.load('effectsize')
-            p_values = self.load('P')
-            genes = self.load('gene')
-        else:
-            effect_size, p_values, genes = self.await_data()
-        df = pd.DataFrame(data={'EFFECTSIZE': effect_size, 'P': p_values, 'GENE': genes},
-                          columns=['EFFECTSIZE', 'P', 'GENE'], index=None)
-        df['SNP'] = None
+        tabel = self.await_data()
         self.log(f"Write the results as {self.load('output_files')['table'][0]}")
-        df.to_csv(self.load('output_files')['table'][0], sep=",", index=False)
+        tabel.to_csv(self.load('output_files')['table'][0], sep=",", index=False)
+        plot_volcano(tabel)
