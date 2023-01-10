@@ -96,7 +96,7 @@ class GlobalMean(AppState):
 
     def run(self) -> str or None:
 
-        self.global_sample_count = (np.array(self.load('global_sample_count')) / len(self.clients)).tolist()
+        self.global_sample_count = (np.array(self.load('global_sample_count'))).tolist()
         clients_features = self.gather_data()
         self.aggregate_features(clients_features)
         self.log_data()
@@ -111,8 +111,8 @@ class GlobalMean(AppState):
         feature_lists = []
         for client_data in clients_features:
             feature_lists.append(client_data)
-        self.store('cohort_names', [f"Cohort_{id}" for id in self.clients])
-        self.cohort_effects = {id: ind for ind, id in enumerate(self.clients) if id != self.id}
+        self.store('cohort_names', [f"Cohort_{i}" for i in range(len(self.clients))])
+        self.cohort_effects = {f"Cohort_{i}": id for i, id in enumerate(self.clients) if id != self.id}
 
         shared_features = set(feature_lists[0])
         for feature_list in feature_lists[1:]:
