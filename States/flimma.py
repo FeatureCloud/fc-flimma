@@ -58,7 +58,8 @@ class C2(CutOffAggregation):
 class B3(ApplyCPM):
     def register(self):
         self.register_transition('Aggregate Gene Names', Role.COORDINATOR, label='Gather genes above the cutoff')
-        self.register_transition('Compute Norm Factors', Role.PARTICIPANT, label='Wait for shared genes above the cutoff')
+        self.register_transition('Compute Norm Factors', Role.PARTICIPANT,
+                                 label='Wait for shared genes above the cutoff')
 
     def run(self) -> str or None:
         super().run()
@@ -70,7 +71,8 @@ class B3(ApplyCPM):
 @app_state('Aggregate Gene Names', Role.COORDINATOR)
 class C3(AggregateGeneNames):
     def register(self):
-        self.register_transition('Compute Norm Factors', Role.COORDINATOR, label='Broadcast shared genes above the cutoff')
+        self.register_transition('Compute Norm Factors', Role.COORDINATOR,
+                                 label='Broadcast shared genes above the cutoff')
 
     def run(self) -> str or None:
         super().run()
@@ -80,7 +82,8 @@ class C3(AggregateGeneNames):
 @app_state('Compute Norm Factors', Role.BOTH)
 class B4(ComputeNormFactors):
     def register(self):
-        self.register_transition('UQ norm factor aggregation', Role.COORDINATOR, label='Gather upper local norm factors')
+        self.register_transition('UQ norm factor aggregation', Role.COORDINATOR,
+                                 label='Gather upper local norm factors')
         self.register_transition('Linear Regression', Role.PARTICIPANT, label='Wait for global UQ factor')
 
     def run(self) -> str or None:
@@ -106,7 +109,8 @@ class B5(LinearRegression):
         super().__init__()
 
     def register(self):
-        self.register_transition('Aggregate Regression Parameters', Role.COORDINATOR, label="Gather intercepts and slopes")
+        self.register_transition('Aggregate Regression Parameters', Role.COORDINATOR,
+                                 label="Gather intercepts and slopes")
         self.register_transition('SSE', Role.PARTICIPANT, label="Wait for Beta")
 
     def run(self) -> str or None:
