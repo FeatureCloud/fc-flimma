@@ -61,8 +61,9 @@ class CutOffAggregation(AppState):
         total_num_samples = self.load('total_num_samples')
         total_count_per_feature = self.aggregate_data(operation=SMPCOperation.ADD, use_smpc=self.load('smpc_used'))
         self.log(f"total_num_samples: {total_num_samples}, total_count_per_feature: {total_count_per_feature}")
-        total_num_samples = np.array(total_num_samples) / len(self.clients)
-        total_count_per_feature = np.array(total_count_per_feature) / len(self.clients)
+        total_num_samples = np.array(total_num_samples)
+        total_count_per_feature = np.array(total_count_per_feature)
+
         total_lib_sizes = np.concatenate(clients_lib_sizes)
 
         # define min allowed number of samples
